@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paddle Blade Pattern Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f4efe4; --panel:#fffdf8; --ink:#1c2830; --muted:#6a767e; --line:#e0d9ca;
+  --grid:#cfe2ea; --gridM:#8db9cc; --blade:#fbe2c4; --bladeS:#1c2830;
+  --accent:#d9572b; --accent2:#2a7f9e; --ok:#3d8b5a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:"Space Grotesk",system-ui,sans-serif;color:var(--ink);background:var(--paper);display:flex;flex-direction:column}
+header{display:flex;align-items:baseline;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:19px;margin:0;font-weight:700;letter-spacing:-.01em}
+header h1 span{color:var(--accent)}
+header p{margin:0;color:var(--muted);font-size:13px}
+main{flex:1;display:grid;grid-template-columns:1fr 380px;min-height:0}
+#stage{position:relative;min-height:0;overflow:hidden}
+#svg{width:100%;height:100%;display:block;touch-action:none;user-select:none}
+.legend{position:absolute;left:14px;bottom:12px;font:12px "JetBrains Mono",monospace;color:var(--muted);background:rgba(255,253,248,.85);padding:6px 9px;border-radius:6px;border:1px solid var(--line)}
+.hint{position:absolute;left:14px;top:12px;font-size:12.5px;color:var(--muted);background:rgba(255,253,248,.85);padding:6px 10px;border-radius:6px;border:1px solid var(--line);max-width:340px}
+aside{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:14px 16px 30px}
+.sec{border-bottom:1px solid var(--line);padding:12px 0}
+.sec:first-child{padding-top:2px}
+.sec h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 9px;font-weight:600}
+select,button{font:inherit}
+select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+.seg{display:flex;background:#efe9dc;border-radius:9px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;padding:7px 6px;border-radius:7px;cursor:pointer;color:var(--muted);font-weight:500;font-size:13.5px}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.tabs{display:flex;gap:6px;margin-bottom:4px}
+.tabs button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:9px 8px;cursor:pointer;text-align:left;color:var(--muted)}
+.tabs button b{display:block;font-size:14px;color:inherit}
+.tabs button small{font-size:11.5px}
+.tabs button.on{border-color:var(--ink);color:var(--ink);background:#fff}
+.grp{margin:12px 0 4px;padding:10px 10px 4px;border-radius:10px;border:1px solid transparent;transition:background .15s,border-color .15s}
+.grp.hl{background:#fff6ec;border-color:#f3d6b8}
+.grp h3{margin:0 0 6px;font-size:13px;display:flex;align-items:center;gap:7px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block}
+.dot.neck{background:var(--accent2)} .dot.tip{background:var(--ink)}
+.row{display:grid;grid-template-columns:1fr 64px;gap:4px 8px;align-items:center;margin-bottom:8px}
+.row label{grid-column:1/3;font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
+.row input[type=range]{width:100%;accent-color:var(--accent)}
+.row input[type=number]{width:64px;padding:4px 5px;border:1px solid var(--line);border-radius:6px;font:12px "JetBrains Mono",monospace;text-align:right}
+.btn{width:100%;border:0;border-radius:10px;padding:11px 12px;background:var(--ink);color:#fff;font-weight:600;cursor:pointer;font-size:14.5px}
+.btn.alt{background:#fff;color:var(--ink);border:1.5px solid var(--ink)}
+.btn.small{padding:7px 10px;font-size:12.5px;font-weight:500;background:#efe9dc;color:var(--ink)}
+.btn:hover{filter:brightness(1.08)}
+.stack{display:grid;gap:8px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat{background:#f7f2e8;border-radius:8px;padding:7px 9px}
+.stat small{display:block;font-size:11px;color:var(--muted)}
+.stat b{font:600 15px "JetBrains Mono",monospace}
+.note{font-size:12px;color:var(--muted);line-height:1.45;margin:8px 0 0}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:9px;color:var(--muted)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:.25s;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* svg */
+.g1{stroke:var(--grid);stroke-width:1;vector-effect:non-scaling-stroke}
+.g5{stroke:var(--gridM);stroke-width:1.2;vector-effect:non-scaling-stroke}
+.axis{stroke:var(--accent2);stroke-width:1;stroke-dasharray:8 4 2 4;vector-effect:non-scaling-stroke}
+.blade{fill:var(--blade);stroke:var(--bladeS);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.neckline{stroke:var(--bladeS);stroke-width:1;stroke-dasharray:5 4;vector-effect:non-scaling-stroke}
+.dim{stroke:var(--muted);stroke-width:1;vector-effect:non-scaling-stroke}
+.hline{stroke:var(--accent2);stroke-width:1.2;vector-effect:non-scaling-stroke}
+.lbl{fill:var(--muted);font-family:"JetBrains Mono",monospace}
+.dimt{fill:var(--ink);font-family:"JetBrains Mono",monospace;font-weight:600}
+.anc{fill:#fff;stroke:var(--accent);stroke-width:2.2;vector-effect:non-scaling-stroke;cursor:grab}
+.anc.tip{stroke:var(--ink)} .anc.neck{stroke:var(--accent2);cursor:default}
+.anc.act{fill:var(--accent)} .anc.tip.act{fill:var(--ink)}
+.anc.dim2{opacity:.45}
+.hnd{fill:var(--accent2);stroke:#fff;stroke-width:1.5;vector-effect:non-scaling-stroke;cursor:grab}
+.nlab{fill:var(--accent);font-family:"Space Grotesk",sans-serif;font-weight:700}
+@media (max-width:820px){
+  main{grid-template-columns:1fr;grid-template-rows:58vh auto}
+  aside{border-left:0;border-top:1px solid var(--line)}
+  header p{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Paddle Blade Pattern <span>·</span> Euroblade / Spoon</h1>
+  <p>Shape the outline with nodes and Bézier curves, then print it at full size.</p>
+</header>
+<main>
+  <div id="stage">
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="hint" id="hint"></div>
+    <div class="legend">Grid 1 cm · bold lines every 5 cm</div>
+  </div>
+  <aside>
+    <div class="sec">
+      <h2>Starting shape</h2>
+      <select id="preset"></select>
+    </div>
+    <div class="sec">
+      <h2>Symmetry</h2>
+      <div class="seg" id="symSeg">
+        <button data-v="1">Symmetrical</button>
+        <button data-v="0">Asymmetrical</button>
+      </div>
+      <div class="seg" id="sideSeg" style="margin-top:8px">
+        <button data-v="0">Edit left side</button>
+        <button data-v="1">Edit right side</button>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="tabs" id="tabs">
+        <button data-v="1"><b>1 · Nodes</b><small>Point positions</small></button>
+        <button data-v="2"><b>2 · Curvature</b><small>Bézier tension &amp; angle</small></button>
+      </div>
+      <div id="controls"></div>
+    </div>
+    <div class="sec">
+      <h2>Measurements</h2>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="sec">
+      <h2>Export at full size</h2>
+      <div class="seg" id="paperSeg">
+        <button data-v="A4">A4</button>
+        <button data-v="A3">A3</button>
+      </div>
+      <p class="note" id="tileInfo"></p>
+      <div class="stack" style="margin-top:10px">
+        <button class="btn" id="pdfBtn">Download printable PDF</button>
+        <button class="btn alt" id="svgBtn">Download SVG (laser cutter / CNC)</button>
+      </div>
+      <p class="note">Print at <b>100% / “Actual size”</b> (not “Fit to page”) and check the 10 cm bar on every sheet. The PDF includes a cover page with a sheet map.</p>
+    </div>
+  </aside>
+</main>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const DEG = Math.PI/180;
+const $ = s => document.querySelector(s);
+const clamp = (v,a,b) => Math.min(b,Math.max(a,v));
+const norm = v => { const l=Math.hypot(v.x,v.y)||1; return {x:v.x/l,y:v.y/l}; };
+const rot = (v,a) => ({x:v.x*Math.cos(a)-v.y*Math.sin(a), y:v.x*Math.sin(a)+v.y*Math.cos(a)});
+const dist = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
+const sang = (a,b) => Math.atan2(a.x*b.y-a.y*b.x, a.x*b.x+a.y*b.y)/DEG;
+const cm = mm => (mm/10).toFixed(1)+' cm';
+
+/* ---------- Plantillas estándar (mm). Nodos: [altura desde el cuello, ancho desde el eje, tensión, ángulo] ---------- */
+const PRESETS = {
+  euro:   { name:'Symmetrical Euroblade (kayak)', L:470, shaftD:30, stub:120,
+            side:{ neckK:1, tipK:1.5, nodes:[[30,17],[90,50],[180,80],[300,93],[425,94,1,22]] } },
+  spoon:  { name:'Asymmetrical spoon (touring kayak)', L:455, shaftD:30, stub:120, tipX:-30, tilt:0,
+            left:{ neckK:1, tipK:1.1, nodes:[[30,17],[100,50],[200,80],[320,86],[420,80]] },
+            right:{ neckK:1, tipK:1.2, nodes:[[30,17],[100,52],[210,82],[310,88],[370,84]] } },
+  wing:   { name:'Compact Euroblade (kids / youth)', L:400, shaftD:28, stub:100,
+            side:{ neckK:1, tipK:1.2, nodes:[[25,15],[80,45],[170,72],[280,82],[360,78]] } },
+  north:  { name:'Northwoods canoe (long blade)', L:690, shaftD:32, stub:150,
+            side:{ neckK:1, tipK:1.3, nodes:[[60,17],[170,48],[320,70],[490,76],[610,64]] } },
+  beaver: { name:'Beavertail canoe', L:700, shaftD:32, stub:150,
+            side:{ neckK:1, tipK:1.1, nodes:[[60,17],[200,62],[360,84],[510,80],[630,52]] } },
+};
+
+let S = null;
+function mkSide(sd){
+  return { neckK:sd.neckK??1, neckA:sd.neckA??0, tipK:sd.tipK??1,
+           nodes:sd.nodes.map(n=>({y:n[0],w:n[1],k:n[2]??1,a:n[3]??0})) };
+}
+function loadPreset(id){
+  const p = PRESETS[id];
+  const prev = S || {};
+  S = { preset:id, sym:!p.right, L:p.L, shaftD:p.shaftD, stub:p.stub, tipX:p.tipX||0, tilt:p.tilt||0,
+        sides:[mkSide(p.left||p.side), mkSide(p.right||p.side)],
+        step:prev.step||1, edit:0, paper:prev.paper||'A4', active:null };
+}
+
+/* ---------- Geometría ---------- */
+function sideData(i){
+  const s = i ? 1 : -1;
+  const src = S.sym ? S.sides[0] : S.sides[i];
+  const r = S.shaftD/2;
+  const tipX = S.sym ? 0 : S.tipX, tilt = S.sym ? 0 : S.tilt*DEG;
+  const P=[{x:s*r,y:0}], K=[src.neckK], A=[src.neckA];
+  src.nodes.forEach(n=>{ P.push({x:s*n.w,y:n.y}); K.push(n.k); A.push(n.a); });
+  P.push({x:tipX,y:S.L}); K.push(src.tipK);
+  const n=P.length, D=[];
+  D[0] = rot({x:0,y:1}, -s*src.neckA*DEG);
+  for(let j=1;j<n-1;j++) D[j] = rot(norm({x:P[j+1].x-P[j-1].x, y:P[j+1].y-P[j-1].y}), -s*A[j]*DEG);
+  const t = {x:Math.cos(tilt), y:Math.sin(tilt)};
+  D[n-1] = s<0 ? t : {x:-t.x,y:-t.y};
+  const segs=[];
+  for(let j=0;j<n-1;j++){
+    const p0=P[j], p3=P[j+1], c=dist(p0,p3)/3;
+    segs.push([p0,{x:p0.x+D[j].x*K[j]*c, y:p0.y+D[j].y*K[j]*c},{x:p3.x-D[j+1].x*K[j+1]*c, y:p3.y-D[j+1].y*K[j+1]*c},p3]);
+  }
+  return {s,P,D,K,segs,src};
+}
+function outline(){
+  const l=sideData(0), r=sideData(1);
+  const segs=[...l.segs, ...r.segs.slice().reverse().map(g=>[g[3],g[2],g[1],g[0]])];
+  return {l,r,segs};
+}
+function bz(g,t){ const u=1-t,a=u*u*u,b=3*u*u*t,c=3*u*t*t,d=t*t*t;
+  return {x:a*g[0].x+b*g[1].x+c*g[2].x+d*g[3].x, y:a*g[0].y+b*g[1].y+c*g[2].y+d*g[3].y}; }
+function sample(segs,N=40){ const pts=[]; segs.forEach((g,i)=>{ for(let k=(i?1:0);k<=N;k++) pts.push(bz(g,k/N)); }); return pts; }
+function stats(){
+  const O=outline(), pts=sample(O.segs);
+  let A=0,minX=1e9,maxX=-1e9,maxY=-1e9;
+  for(let i=0;i<pts.length;i++){ const p=pts[i],q=pts[(i+1)%pts.length]; A+=p.x*q.y-q.x*p.y;
+    minX=Math.min(minX,p.x); maxX=Math.max(maxX,p.x); maxY=Math.max(maxY,p.y); }
+  return {O,pts,area:Math.abs(A)/2, minX, maxX, maxY, width:maxX-minX};
+}
+
+/* ---------- Dibujo en pantalla ---------- */
+const svg = $('#svg');
+let VB=[0,0,1,1], PX=1;
+const sp = p => `${p.x.toFixed(2)},${(-p.y).toFixed(2)}`;
+function pathD(segs, withStub){
+  let d=`M${sp(segs[0][0])}`;
+  segs.forEach(g=>{ d+=` C${sp(g[1])} ${sp(g[2])} ${sp(g[3])}`; });
+  const r=S.shaftD/2;
+  if(withStub && S.stub>0) d+=` L${sp({x:r,y:-S.stub})} L${sp({x:-r,y:-S.stub})}`;
+  return d+' Z';
+}
+function draw(){
+  const st = stats(), O=st.O;
+  const hx = Math.max(Math.abs(st.minX),Math.abs(st.maxX))+50;
+  const top = Math.max(S.L,st.maxY)+75, bot = S.stub+30;
+  VB=[-hx,-top,2*hx,top+bot];
+  svg.setAttribute('viewBox',VB.join(' '));
+  const R=svg.getBoundingClientRect();
+  PX = Math.max(VB[2]/(R.width||1), VB[3]/(R.height||1));
+  const fs=11*PX;
+  let h='';
+  // cuadrícula (ampliada para cubrir el área visible)
+  const ex = Math.max(0,(R.width*PX-VB[2])/2), ey=Math.max(0,(R.height*PX-VB[3])/2);
+  const x0=Math.floor((VB[0]-ex)/10)*10, x1=Math.ceil((VB[0]+VB[2]+ex)/10)*10;
+  const y0=Math.floor((VB[1]-ey)/10)*10, y1=Math.ceil((VB[1]+VB[3]+ey)/10)*10;
+  let g1='',g5='';
+  for(let x=x0;x<=x1;x+=10){ const l=`<line x1="${x}" y1="${y0}" x2="${x}" y2="${y1}"/>`; if(x%50===0) g5+=l; else g1+=l; }
+  for(let y=y0;y<=y1;y+=10){ const l=`<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}"/>`; if(y%50===0) g5+=l; else g1+=l; }
+  h+=`<g class="g1">${g1}</g><g class="g5">${g5}</g>`;
+  // etiquetas cm
+  for(let y=Math.ceil(-bot/50)*50; y<=top; y+=50) h+=`<text class="lbl" x="${-hx+4*PX}" y="${-y-3*PX}" font-size="${fs}">${y/10}</text>`;
+  h+=`<line class="axis" x1="0" y1="${y0}" x2="0" y2="${y1}"/>`;
+  // pala + eje
+  h+=`<path class="blade" d="${pathD(O.segs,true)}"/>`;
+  const r=S.shaftD/2;
+  h+=`<line class="neckline" x1="${-r}" y1="0" x2="${r}" y2="0"/>`;
+  // cotas
+  const yw=-(st.maxY+18);
+  h+=`<line class="dim" x1="${st.minX}" y1="${yw}" x2="${st.maxX}" y2="${yw}"/>`+
+     `<line class="dim" x1="${st.minX}" y1="${yw-4}" x2="${st.minX}" y2="${yw+4}"/><line class="dim" x1="${st.maxX}" y1="${yw-4}" x2="${st.maxX}" y2="${yw+4}"/>`+
+     `<text class="dimt" text-anchor="middle" x="${(st.minX+st.maxX)/2}" y="${yw-4*PX}" font-size="${fs*1.1}">${cm(st.width)}</text>`;
+  const xl=st.maxX+20;
+  h+=`<line class="dim" x1="${xl}" y1="0" x2="${xl}" y2="${-S.L}"/>`+
+     `<line class="dim" x1="${xl-4}" y1="0" x2="${xl+4}" y2="0"/><line class="dim" x1="${xl-4}" y1="${-S.L}" x2="${xl+4}" y2="${-S.L}"/>`+
+     `<text class="dimt" x="${xl+5*PX}" y="${-S.L/2}" font-size="${fs*1.1}" transform="rotate(-90 ${xl+5*PX} ${-S.L/2})" text-anchor="middle" dy="${fs}">${cm(S.L)}</text>`;
+  // nodos y manijas
+  const rad=6.5*PX, hr=5*PX;
+  [O.l,O.r].forEach((sd,i)=>{
+    const dim = !S.sym && S.edit!==i ? ' dim2':'';
+    const n=sd.P.length;
+    if(S.step===2){
+      sd.segs.forEach((g,j)=>{
+        h+=`<line class="hline" x1="${g[0].x}" y1="${-g[0].y}" x2="${g[1].x}" y2="${-g[1].y}"/>`;
+        h+=`<line class="hline" x1="${g[3].x}" y1="${-g[3].y}" x2="${g[2].x}" y2="${-g[2].y}"/>`;
+      });
+      sd.segs.forEach((g,j)=>{
+        h+=`<circle class="hnd${dim}" data-k="out" data-s="${i}" data-j="${j}" cx="${g[1].x}" cy="${-g[1].y}" r="${hr}"/>`;
+        h+=`<circle class="hnd${dim}" data-k="in" data-s="${i}" data-j="${j+1}" cx="${g[2].x}" cy="${-g[2].y}" r="${hr}"/>`;
+      });
+    }
+    sd.P.forEach((p,j)=>{
+      if(i===1 && j===n-1) return; // la punta se dibuja una vez
+      const cls = j===0?'neck':(j===n-1?'tip':'');
+      const act = S.active===j ? ' act':'';
+      h+=`<circle class="anc ${cls}${act}${j===n-1?'':dim}" data-k="anc" data-s="${i}" data-j="${j}" cx="${p.x}" cy="${-p.y}" r="${rad}"/>`;
+      if(j>0 && j<n-1) h+=`<text class="nlab" x="${p.x+(i?1:-1)*11*PX}" y="${-p.y+4*PX}" font-size="${fs}" text-anchor="${i?'start':'end'}">${j}</text>`;
+    });
+  });
+  svg.innerHTML=h;
+  // estadísticas
+  $('#stats').innerHTML = [
+    ['Blade length',cm(S.L)],['Max width',cm(st.width)],
+    ['Blade area',(st.area/100).toFixed(0)+' cm²'],['Length / width',(S.L/st.width).toFixed(2)],
+    ['Shaft diameter',(S.shaftD).toFixed(1)+' mm'],['Printed length',cm(S.L+S.stub)]
+  ].map(([a,b])=>`<div class="stat"><small>${a}</small><b>${b}</b></div>`).join('');
+  const T=tiling();
+  $('#tileInfo').textContent = `${S.paper} ${T.W>T.H?'landscape':'portrait'}: ${T.cols} × ${T.rows} = ${T.n} sheet${T.n>1?'s':''} + cover page (${T.ov} mm overlap).`;
+  $('#hint').textContent = S.step===1
+    ? 'Step 1 · Drag the nodes (circles) or use the sliders. The blue neck node follows the shaft diameter.'
+    : 'Step 2 · Drag the blue handles to change the tension and angle of each Bézier curve.';
+  save();
+}
+
+/* ---------- Arrastre en el lienzo ---------- */
+let drag=null;
+function worldPt(e){ const pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY;
+  const q=pt.matrixTransform(svg.getScreenCTM().inverse()); return {x:q.x,y:-q.y}; }
+svg.addEventListener('pointerdown',e=>{
+  const t=e.target; if(!t.dataset || !t.dataset.k) return;
+  const j=+t.dataset.j, i=+t.dataset.s, k=t.dataset.k;
+  if(k==='anc' && j===0) return;
+  drag={k,i,j}; svg.setPointerCapture(e.pointerId);
+  S.active=j;
+  if(!S.sym && S.edit!==i && !(k==='anc' && j===S.sides[0].nodes.length+1)){ S.edit=i; renderPanel(); }
+  highlight(); e.preventDefault();
+});
+svg.addEventListener('pointermove',e=>{
+  if(!drag) return;
+  const w=worldPt(e), {k,i,j}=drag, s=i?1:-1;
+  const src = S.sym?S.sides[0]:S.sides[i];
+  const nN = src.nodes.length;
+  if(k==='anc'){
+    if(j===nN+1){ S.L=clamp(Math.round(w.y), maxLastY()+10, 1000); if(!S.sym) S.tipX=clamp(Math.round(w.x),-100,100); }
+    else { const n=src.nodes[j-1]; n.w=clamp(Math.round(s*w.x*2)/2,0,160); setY(src,j-1,Math.round(w.y)); }
+  } else {
+    const sd=sideData(i), P=sd.P[j];
+    const v = k==='out' ? {x:w.x-P.x,y:w.y-P.y} : {x:P.x-w.x,y:P.y-w.y};
+    const chord = k==='out' ? dist(P,sd.P[j+1]) : dist(sd.P[j-1],P);
+    const kk = clamp(Math.hypot(v.x,v.y)/(chord/3),0,3);
+    if(j===0){ src.neckK=+kk.toFixed(2); src.neckA=Math.round(clamp(-s*sang({x:0,y:1},v),-60,60)); }
+    else if(j===nN+1){ src.tipK=+kk.toFixed(2);
+      if(!S.sym){ const t = s<0?v:{x:-v.x,y:-v.y}; S.tilt=Math.round(clamp(Math.atan2(t.y,t.x)/DEG,-45,45)); } }
+    else { const n=src.nodes[j-1]; const auto=norm({x:sd.P[j+1].x-sd.P[j-1].x,y:sd.P[j+1].y-sd.P[j-1].y});
+      n.k=+kk.toFixed(2); n.a=Math.round(clamp(-s*sang(auto,v),-80,80)); }
+  }
+  draw(); sync();
+});
+const endDrag=()=>{ drag=null; };
+svg.addEventListener('pointerup',endDrag); svg.addEventListener('pointercancel',endDrag);
+
+function maxLastY(){ const a=S.sides[0].nodes, b=S.sides[1].nodes;
+  return S.sym ? a[a.length-1].y : Math.max(a[a.length-1].y, b[b.length-1].y); }
+function setY(src,i,v){ const ns=src.nodes; const prev=i?ns[i-1].y:0, next=i<ns.length-1?ns[i+1].y:S.L;
+  ns[i].y = clamp(v, prev+2, next-2); }
+
+/* ---------- Panel de controles ---------- */
+let C=[];
+function ctrl(label,get,set,min,max,step,unit){
+  C.push({get,set,min,max});
+  const id=C.length-1;
+  return `<div class="row"><label><span>${label}</span><span>${unit}</span></label>
+    <input type="range" data-c="${id}" step="${step}"><input type="number" data-c="${id}" step="${step}"></div>`;
+}
+function group(title,rows,node,cls){
+  return `<div class="grp" data-node="${node}"><h3><span class="dot ${cls||''}"></span>${title}</h3>${rows.join('')}</div>`;
+}
+function renderPanel(){
+  C=[];
+  const src = S.sym?S.sides[0]:S.sides[S.edit];
+  const sn = S.sym?'':(S.edit?' · right':' · left');
+  const nN=src.nodes.length;
+  let h='';
+  if(S.step===1){
+    const g=[
+      ctrl('Blade length (neck → tip)',()=>S.L,v=>{S.L=clamp(v,maxLastY()+10,1000)},250,1000,1,'mm'),
+      ctrl('Shaft / neck diameter',()=>S.shaftD,v=>S.shaftD=v,18,45,0.5,'mm'),
+      ctrl('Shaft length to print',()=>S.stub,v=>S.stub=v,0,400,5,'mm')];
+    if(!S.sym) g.push(ctrl('Tip sideways offset',()=>S.tipX,v=>S.tipX=v,-100,100,1,'mm'));
+    h+=group('Blade & tip',g,nN+1,'tip');
+    src.nodes.forEach((n,i)=>{
+      h+=group(`Node ${i+1}${sn}`,[
+        ctrl('Height from neck',()=>n.y,v=>setY(src,i,v),0,()=>S.L,1,'mm'),
+        ctrl('Width from centerline',()=>n.w,v=>n.w=v,0,160,0.5,'mm')],i+1);
+    });
+  } else {
+    h+=group(`Neck${sn}`,[
+      ctrl('Tension',()=>src.neckK,v=>src.neckK=v,0,3,0.01,'×'),
+      ctrl('Angle (flare in / out)',()=>src.neckA,v=>src.neckA=v,-60,60,1,'°')],0,'neck');
+    src.nodes.forEach((n,i)=>{
+      h+=group(`Node ${i+1}${sn}`,[
+        ctrl('Tension (handle length)',()=>n.k,v=>n.k=v,0,3,0.01,'×'),
+        ctrl('Angle (+ = outward)',()=>n.a,v=>n.a=v,-80,80,1,'°')],i+1);
+    });
+    const tg=[ctrl('Tension (tip roundness)',()=>src.tipK,v=>src.tipK=v,0,3,0.01,'×')];
+    if(!S.sym) tg.push(ctrl('Tip tilt',()=>S.tilt,v=>S.tilt=v,-45,45,1,'°'));
+    h+=group('Tip',tg,nN+1,'tip');
+    h+=`<button class="btn small" id="resetCurv" style="margin-top:8px">Reset curvature (tension 1, angle 0)</button>`;
+  }
+  const el=$('#controls'); el.innerHTML=h;
+  el.querySelectorAll('input[data-c]').forEach(inp=>{
+    inp.addEventListener('input',()=>{ const v=parseFloat(inp.value); if(isNaN(v)) return;
+      C[+inp.dataset.c].set(v); draw(); sync(inp); });
+  });
+  el.querySelectorAll('.grp').forEach(gp=>{
+    const on=()=>{ S.active=+gp.dataset.node; highlight(); draw(); };
+    gp.addEventListener('pointerenter',on); gp.addEventListener('focusin',on);
+  });
+  const rc=$('#resetCurv'); if(rc) rc.onclick=()=>{ const ss=S.sym?[S.sides[0]]:S.sides;
+    ss.forEach(sd=>{ sd.neckK=1; sd.neckA=0; sd.tipK=1; sd.nodes.forEach(n=>{n.k=1;n.a=0;}); });
+    if(!S.sym) S.tilt=0; draw(); sync(); };
+  // estados de botones
+  setSeg('#symSeg', S.sym?'1':'0'); setSeg('#sideSeg', String(S.edit)); setSeg('#tabs', String(S.step)); setSeg('#paperSeg', S.paper);
+  $('#sideSeg').style.display = S.sym?'none':'flex';
+  sync(); highlight();
+}
+function sync(except){
+  document.querySelectorAll('#controls input[data-c]').forEach(inp=>{
+    if(inp===except) return;
+    const c=C[+inp.dataset.c];
+    if(inp.type==='range'){ inp.min=typeof c.min==='function'?c.min():c.min; inp.max=typeof c.max==='function'?c.max():c.max; }
+    const v=c.get(); inp.value = Math.round(v*100)/100;
+  });
+  if(except){ // sincroniza el gemelo (range <-> number)
+    document.querySelectorAll(`#controls input[data-c="${except.dataset.c}"]`).forEach(x=>{ if(x!==except) x.value=Math.round(C[+except.dataset.c].get()*100)/100; });
+  }
+}
+function highlight(){ document.querySelectorAll('#controls .grp').forEach(g=>g.classList.toggle('hl', +g.dataset.node===S.active)); }
+function setSeg(sel,v){ document.querySelectorAll(sel+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); }
+
+$('#preset').innerHTML = Object.entries(PRESETS).map(([k,p])=>`<option value="${k}">${p.name}</option>`).join('');
+$('#preset').onchange = e=>{ loadPreset(e.target.value); renderPanel(); draw(); };
+$('#symSeg').onclick = e=>{ const b=e.target.closest('button'); if(!b) return;
+  const sym=b.dataset.v==='1'; if(sym===S.sym) return;
+  if(!sym){ S.sides[1]=JSON.parse(JSON.stringify(S.sides[0])); S.tipX=0; S.tilt=0; }
+  else { S.edit=0; }
+  S.sym=sym; renderPanel(); draw(); };
+$('#sideSeg').onclick = e=>{ const b=e.target.closest('button'); if(!b) return; S.edit=+b.dataset.v; renderPanel(); draw(); };
+$('#tabs').onclick = e=>{ const b=e.target.closest('button'); if(!b) return; S.step=+b.dataset.v; renderPanel(); draw(); };
+$('#paperSeg').onclick = e=>{ const b=e.target.closest('button'); if(!b) return; S.paper=b.dataset.v; setSeg('#paperSeg',S.paper); draw(); };
+window.addEventListener('resize',()=>draw());
+
+/* ---------- Guardado local ---------- */
+function save(){ try{ localStorage.setItem('remo-patron-v1', JSON.stringify(S)); }catch(e){} }
+function restore(){ try{ const t=localStorage.getItem('remo-patron-v1'); if(t){ const o=JSON.parse(t); if(o && o.sides && o.sides[0].nodes) { S=o; S.active=null; return true; } } }catch(e){} return false; }
+
+/* ---------- Mosaico de impresión ---------- */
+function tiling(){
+  const P = S.paper==='A3'?[297,420]:[210,297], m=12, ov=15;
+  const st=stats();
+  const b={minX:Math.min(st.minX,-S.shaftD/2)-5, maxX:Math.max(st.maxX,S.shaftD/2)+5, minY:-S.stub-5, maxY:Math.max(S.L,st.maxY)+5};
+  const bw=b.maxX-b.minX, bh=b.maxY-b.minY;
+  let best=null;
+  for(const [W,H] of [[P[0],P[1]],[P[1],P[0]]]){
+    const uw=W-2*m, uh=H-2*m, sw=uw-ov, sh=uh-ov;
+    const cols = bw<=uw?1:Math.ceil((bw-uw)/sw)+1;
+    const rows = bh<=uh?1:Math.ceil((bh-uh)/sh)+1;
+    const n=cols*rows;
+    if(!best||n<best.n) best={W,H,uw,uh,sw,sh,cols,rows,n,m,ov};
+  }
+  const covW=best.uw+(best.cols-1)*best.sw, covH=best.uh+(best.rows-1)*best.sh;
+  best.x0=(b.minX+b.maxX)/2-covW/2; best.yTop=(b.minY+b.maxY)/2+covH/2;
+  best.covW=covW; best.covH=covH; best.st=st;
+  return best;
+}
+
+/* ---------- Generador PDF vectorial (sin dependencias) ---------- */
+const PT=72/25.4;
+const fx = n => { const v=Math.round(n*1000)/1000; return Object.is(v,-0)?'0':String(v); };
+const WIN={'—':151,'–':150,'…':133,'“':147,'”':148,'‘':145,'’':146,'•':149,'€':128};
+function ptxt(s){ let o=''; for(const ch of s){ let c=ch.charCodeAt(0);
+    if(WIN[ch]) c=WIN[ch]; else if(c>255) c=63;
+    let x=String.fromCharCode(c); if(x==='('||x===')'||x==='\\') x='\\'+x; o+=x; } return o; }
+function T(x,y,size,s,bold){ return `BT /${bold?'F2':'F1'} ${fx(size)} Tf ${fx(x)} ${fx(y)} Td (${ptxt(s)}) Tj ET\n`; }
+function pdfPath(segs){ const r=S.shaftD/2; let d=`${fx(segs[0][0].x)} ${fx(segs[0][0].y)} m\n`;
+  segs.forEach(g=>{ d+=`${fx(g[1].x)} ${fx(g[1].y)} ${fx(g[2].x)} ${fx(g[2].y)} ${fx(g[3].x)} ${fx(g[3].y)} c\n`; });
+  if(S.stub>0) d+=`${fx(r)} ${fx(-S.stub)} l ${fx(-r)} ${fx(-S.stub)} l\n`;
+  return d+'h\n'; }
+const rowName = r => String.fromCharCode(65+r);
+function buildPDF(pages, title){
+  const objs=[];
+  objs[1]='<< /Type /Catalog /Pages 2 0 R >>';
+  objs[3]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+  objs[4]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+  objs[5]=`<< /Title (${ptxt(title)}) /Creator (Paddle Blade Pattern Maker) >>`;
+  const kids=[]; let id=6;
+  pages.forEach(p=>{ const pid=id++, cid=id++; kids.push(pid+' 0 R');
+    objs[pid]=`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${fx(p.w)} ${fx(p.h)}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${cid} 0 R >>`;
+    objs[cid]=`<< /Length ${p.s.length} >>\nstream\n${p.s}\nendstream`; });
+  objs[2]=`<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${pages.length} >>`;
+  let out='%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'; const off=[];
+  for(let i=1;i<id;i++){ off[i]=out.length; out+=`${i} 0 obj\n${objs[i]}\nendobj\n`; }
+  const xr=out.length;
+  out+=`xref\n0 ${id}\n0000000000 65535 f \n`;
+  for(let i=1;i<id;i++) out+=String(off[i]).padStart(10,'0')+' 00000 n \n';
+  out+=`trailer\n<< /Size ${id} /Root 1 0 R /Info 5 0 R >>\nstartxref\n${xr}\n%%EOF`;
+  const b=new Uint8Array(out.length); for(let i=0;i<out.length;i++) b[i]=out.charCodeAt(i)&255;
+  return b;
+}
+function makePDF(){
+  const t=tiling(), st=t.st, O=st.O, name=PRESETS[S.preset]?.name||'Custom';
+  const W=t.W*PT, H=t.H*PT, m=t.m, path=pdfPath(O.segs), r=S.shaftD/2;
+  const pages=[];
+  const tl=(rr,cc)=>({x0:t.x0+cc*t.sw, yT:t.yTop-rr*t.sh});
+  // --- Portada ---
+  let s='';
+  s+='0.11 0.16 0.19 rg\n'+T(m*PT,H-m*PT-14,18,'Paddle blade pattern — full size',true);
+  s+=T(m*PT,H-m*PT-32,11,`${name}${S.sym?' · symmetrical':' · asymmetrical'} · ${S.paper} paper, ${t.W>t.H?'landscape':'portrait'}`);
+  const info=[`Blade length: ${cm(S.L)}`,`Max width: ${cm(st.width)}`,`Blade area: ${(st.area/100).toFixed(0)} cm²`,
+    `Shaft diameter: ${S.shaftD} mm`,`Printed shaft: ${S.stub} mm`,`Sheets: ${t.cols} column(s) × ${t.rows} row(s) = ${t.n}`];
+  info.forEach((l,i)=>{ s+=T(m*PT,H-m*PT-58-i*15,10,l); });
+  const steps=['1. Print at 100% ("Actual size"), not "Fit to page".',
+    '2. Measure the 10 cm bar at the foot of each sheet to check the scale.',
+    '3. On each sheet, trim along the dashed "cut here" line (left and/or top).',
+    '4. Butt that edge against the frame of the neighbouring sheet named on the line.',
+    '5. Check alignment against the 1 cm grid and tape the sheets together.',
+    '6. The short horizontal dashed line marks the neck (where the blade starts).'];
+  const sx = t.W>t.H ? t.W*0.52 : m;
+  const sy0 = t.W>t.H ? H-m*PT-58 : H-m*PT-58-info.length*15-14;
+  s+=T(sx*PT,sy0+2,10,'Instructions',true);
+  steps.forEach((l,i)=>{ s+=T(sx*PT,sy0-14-i*13,9,l); });
+  // mapa
+  const boxTop = sy0-14-steps.length*13-20, boxB=m*PT+20, boxL=m*PT, boxR=W-m*PT;
+  const ms=Math.min((boxR-boxL)/t.covW,(boxTop-boxB)/t.covH);
+  const ox=boxL+((boxR-boxL)-t.covW*ms)/2 - t.x0*ms, oy=boxB+((boxTop-boxB)-t.covH*ms)/2-(t.yTop-t.covH)*ms;
+  s+=`q ${fx(ms)} 0 0 ${fx(ms)} ${fx(ox)} ${fx(oy)} cm\n`;
+  s+=`0.98 0.886 0.769 rg 0.11 0.16 0.19 RG ${fx(0.8/ms)} w\n${path}b\n`;
+  s+=`[${fx(3/ms)} ${fx(2/ms)}] 0 d ${fx(0.5/ms)} w 0 0.5 1 RG ${fx(-r)} 0 m ${fx(r)} 0 l S [] 0 d\n`;
+  for(let rr=0;rr<t.rows;rr++) for(let cc=0;cc<t.cols;cc++){
+    const q=tl(rr,cc);
+    s+=`0.85 0.34 0.17 RG ${fx(0.7/ms)} w ${fx(q.x0)} ${fx(q.yT-t.uh)} ${fx(t.uw)} ${fx(t.uh)} re S\n`;
+    s+='0.85 0.34 0.17 rg '+T(q.x0+4/ms,q.yT-14/ms,11/ms,rowName(rr)+(cc+1),true);
+  }
+  s+='Q\n';
+  s+=scaleBar(m);
+  pages.push({w:W,h:H,s});
+  // --- Hojas en mosaico ---
+  for(let rr=0;rr<t.rows;rr++) for(let cc=0;cc<t.cols;cc++){
+    const q=tl(rr,cc), x0=q.x0, x1=x0+t.uw, yT=q.yT, yB=yT-t.uh, lab=rowName(rr)+(cc+1);
+    let p='q\n';
+    p+=`${fx(m*PT)} ${fx(m*PT)} ${fx(t.uw*PT)} ${fx(t.uh*PT)} re W n\n`;
+    p+=`${fx(PT)} 0 0 ${fx(PT)} ${fx((m-x0)*PT)} ${fx((m-yB)*PT)} cm\n`;
+    // cuadrícula alineada al origen del remo
+    let g1='',g5='';
+    for(let x=Math.ceil(x0/10)*10;x<=x1;x+=10){ const l=`${fx(x)} ${fx(yB)} m ${fx(x)} ${fx(yT)} l\n`; if(x%50===0) g5+=l; else g1+=l; }
+    for(let y=Math.ceil(yB/10)*10;y<=yT;y+=10){ const l=`${fx(x0)} ${fx(y)} m ${fx(x1)} ${fx(y)} l\n`; if(y%50===0) g5+=l; else g1+=l; }
+    p+=`0.78 0.87 0.91 RG 0.12 w\n${g1}S\n0.45 0.66 0.76 RG 0.3 w\n${g5}S\n`;
+    // pala
+    p+=`0.98 0.886 0.769 rg 0 0 0 RG 0.45 w 1 j\n${path}b\n`;
+    p+=`[2 1.5] 0 d 0.25 w ${fx(-r)} 0 m ${fx(r)} 0 l S\n`;
+    p+=`0.16 0.5 0.62 RG [6 2 1 2] 0 d 0.2 w 0 ${fx(Math.max(yB,-S.stub-20))} m 0 ${fx(Math.min(yT,S.L+20))} l S [] 0 d\n`;
+    // marcas cada 5 cm sobre el eje
+    p+='0.16 0.5 0.62 rg\n';
+    for(let y=Math.ceil(yB/50)*50;y<=yT;y+=50){ if(y<-S.stub-20||y>S.L+20) continue;
+      p+=`0.3 w 0.16 0.5 0.62 RG -2 ${y} m 2 ${y} l S\n`+T(1.5,y+1,2.6,(y/10)+' cm'); }
+    p+='0.12 0.12 0.12 rg '+T(1.5,-3.2,2.4,'neck');
+    p+='Q\n';
+    // marco del área útil
+    p+=`0.55 g 0.55 G 0.5 w ${fx(m*PT)} ${fx(m*PT)} ${fx(t.uw*PT)} ${fx(t.uh*PT)} re S\n`;
+    // líneas de corte (solape)
+    p+='0.85 0.34 0.17 RG 0.85 0.34 0.17 rg 0.8 w [4 3] 0 d\n';
+    if(cc>0){ const x=(m+t.ov)*PT; p+=`${fx(x)} ${fx(m*PT)} m ${fx(x)} ${fx((m+t.uh)*PT)} l S\n`;
+      p+=`q 0 1 -1 0 ${fx(x-3)} ${fx((m+12)*PT)} cm\n`+T(0,0,7,`cut here · align with right edge of ${rowName(rr)+cc}`)+'Q\n'; }
+    if(rr>0){ const y=(m+t.uh-t.ov)*PT; p+=`${fx(m*PT)} ${fx(y)} m ${fx((m+t.uw)*PT)} ${fx(y)} l S\n`;
+      p+=T((m+(cc>0?t.ov:0)+3)*PT,y+3,7,`cut here · align with bottom edge of ${rowName(rr-1)+(cc+1)}`); }
+    p+='[] 0 d\n';
+    // etiqueta grande
+    p+='0.85 0.34 0.17 rg '+T((m+t.uw)*PT-46,m*PT+8,26,lab,true);
+    // encabezado
+    p+='0.11 0.16 0.19 rg '+T(m*PT,H-m*PT+8,8,`Sheet ${lab} — row ${rr+1}/${t.rows}, column ${cc+1}/${t.cols} · ${name} · Print at 100%`);
+    p+=scaleBar(m);
+    pages.push({w:W,h:H,s:p});
+  }
+  return buildPDF(pages, 'Paddle blade pattern — '+name);
+}
+function scaleBar(m){
+  let s='0.11 0.16 0.19 RG 0.5 w\n';
+  const x=m*PT, y=(m-8)*PT, h=2.5*PT;
+  for(let i=0;i<10;i++){ s+=(i%2?'1 g':'0.11 0.16 0.19 rg')+` ${fx(x+i*10*PT)} ${fx(y)} ${fx(10*PT)} ${fx(h)} re B\n`; }
+  s+='0.11 0.16 0.19 rg '+T(x+100*PT+6,y+1,7,'← this bar must measure exactly 10 cm');
+  return s.replace('←','<-');
+}
+
+/* ---------- SVG a tamaño real ---------- */
+function makeSVG(){
+  const st=stats(), O=st.O, pad=10, r=S.shaftD/2;
+  const minX=Math.min(st.minX,-r)-pad, maxX=Math.max(st.maxX,r)+pad, minY=-S.stub-pad, maxY=Math.max(S.L,st.maxY)+pad;
+  const w=maxX-minX, h=maxY-minY;
+  let d=`M${fx(O.segs[0][0].x)},${fx(O.segs[0][0].y)}`;
+  O.segs.forEach(g=>{ d+=` C${fx(g[1].x)},${fx(g[1].y)} ${fx(g[2].x)},${fx(g[2].y)} ${fx(g[3].x)},${fx(g[3].y)}`; });
+  if(S.stub>0) d+=` L${fx(r)},${fx(-S.stub)} L${fx(-r)},${fx(-S.stub)}`;
+  d+=' Z';
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${fx(w)}mm" height="${fx(h)}mm" viewBox="0 0 ${fx(w)} ${fx(h)}">
+  <title>Paddle blade pattern — ${PRESETS[S.preset]?.name||''} (1:1 scale, mm)</title>
+  <g transform="translate(${fx(-minX)} ${fx(maxY)}) scale(1 -1)">
+    <path id="outline" d="${d}" fill="none" stroke="#000" stroke-width="0.25"/>
+    <line id="neck" x1="${fx(-r)}" y1="0" x2="${fx(r)}" y2="0" stroke="#0044ff" stroke-width="0.2" stroke-dasharray="2 1.5"/>
+    <line id="centerline" x1="0" y1="${fx(-S.stub)}" x2="0" y2="${fx(S.L)}" stroke="#0044ff" stroke-width="0.15" stroke-dasharray="6 2 1 2"/>
+  </g>
+</svg>`;
+}
+
+/* ---------- Descargas ---------- */
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),2600); }
+const dlReady = (window.claude && typeof window.claude.use==='function') ? window.claude.use('downloads').catch(()=>null) : Promise.resolve(null);
+async function saveFile(name,data,mime){
+  const blob=new Blob([data],{type:mime});
+  const d = await dlReady;
+  if(d){
+    try{ await d.save({filename:name,data:blob}); toast('File ready: '+name); return; }
+    catch(e){ if(e&&e.code==='declined'){ toast('Download cancelled'); return; }
+      if(e&&e.code==='rate_limited'){ toast('Please wait a moment and try again'); return; } }
+  }
+  const url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000); toast('Downloading '+name);
+}
+const fname = ext => `paddle-blade-${S.preset}-${S.sym?'sym':'asym'}-${S.paper && ext==='pdf'?S.paper+'-':''}${Math.round(S.L)}mm.${ext}`;
+$('#pdfBtn').onclick=()=>{ try{ saveFile(fname('pdf'), makePDF(), 'application/pdf'); }catch(e){ console.error(e); toast('Could not generate the PDF'); } };
+$('#svgBtn').onclick=()=>saveFile(fname('svg'), makeSVG(), 'image/svg+xml');
+
+/* ---------- Inicio ---------- */
+if(!restore()) loadPreset('euro');
+$('#preset').value = PRESETS[S.preset]?S.preset:'euro';
+renderPanel(); draw();
+if(document.fonts) document.fonts.ready.then(()=>draw());
+</script>
+</body>
+</html>
